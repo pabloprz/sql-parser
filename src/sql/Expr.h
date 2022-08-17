@@ -20,6 +20,7 @@ enum ExprType {
   kExprLiteralNull,
   kExprLiteralDate,
   kExprLiteralInterval,
+  kExprLiteralDayOfTheWeek,
   kExprStar,
   kExprParameter,
   kExprColumnRef,
@@ -65,6 +66,7 @@ enum OperatorType {
   kOpOr,
   kOpIn,
   kOpConcat,
+  kOpIsDayOfTheWeek,
 
   // Unary operators.
   kOpNot,
@@ -81,6 +83,16 @@ enum DatetimeField {
   kDatetimeDay,
   kDatetimeMonth,
   kDatetimeYear,
+};
+
+enum DayOfTheWeek {
+    kDaySunday,
+    kDayMonday,
+    kDayTuesday,
+    kDayWednesday,
+    kDayThursday,
+    kDayFriday,
+    kDaySaturday
 };
 
 typedef struct Expr Expr;
@@ -106,6 +118,7 @@ struct Expr {
   int64_t ival;
   int64_t ival2;
   DatetimeField datetimeField;
+  DayOfTheWeek dayOfTheWeek;
   ColumnType columnType;
   bool isBoolLiteral;
 
@@ -132,6 +145,8 @@ struct Expr {
 
   static Expr* makeOpBinary(Expr* expr1, OperatorType op, Expr* expr2);
 
+  static Expr* makeOpBinaryDOW(Expr *expr1, DayOfTheWeek dow);
+
   static Expr* makeBetween(Expr* expr, Expr* left, Expr* right);
 
   static Expr* makeCaseList(Expr* caseListElement);
@@ -156,6 +171,8 @@ struct Expr {
 
   static Expr* makeIntervalLiteral(int64_t duration, DatetimeField unit);
 
+  static Expr* makeDayOfTheWeekLiteral(DayOfTheWeek dow);
+
   static Expr* makeColumnRef(char* name);
 
   static Expr* makeColumnRef(char* table, char* name);
@@ -165,6 +182,8 @@ struct Expr {
   static Expr* makeStar(char* table);
 
   static Expr* makeFunctionRef(char* func_name, std::vector<Expr*>* exprList, bool distinct);
+
+  static Expr* makeFunctionRef(char* func_name, Expr *intValue, DatetimeField datetime);
 
   static Expr* makeArray(std::vector<Expr*>* exprList);
 

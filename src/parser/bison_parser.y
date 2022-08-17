@@ -125,6 +125,7 @@
   hsql::ColumnType column_type_t;
   hsql::ConstraintType column_constraint_t;
   hsql::DatetimeField datetime_field;
+  hsql::DayOfTheWeek day_of_the_week_field;
   hsql::DropColumnAction* drop_action_t;
   hsql::Expr* expr;
   hsql::GroupByDescription* group_t;
@@ -143,7 +144,7 @@
   hsql::LockingClause* locking_t;
 
   std::vector<char*>* str_vec;
-  std::unordered_set<hsql::ConstraintType>* column_constraint_set;
+  std::vector<hsql::ConstraintType>* column_constraint_vec;
   std::vector<hsql::Expr*>* expr_vec;
   std::vector<hsql::OrderDescription*>* order_vec;
   std::vector<hsql::SQLStatement*>* stmt_vec;
@@ -163,7 +164,7 @@
      ** Destructor symbols
      *********************************/
     // clang-format off
-    %destructor { } <fval> <ival> <bval> <join_type> <order_type> <datetime_field> <column_type_t> <column_constraint_t> <import_type_t> <column_constraint_set> <lock_mode_t> <lock_wait_policy_t>
+    %destructor { } <fval> <ival> <bval> <join_type> <order_type> <datetime_field> <day_of_the_week_field> <column_type_t> <column_constraint_t> <import_type_t> <column_constraint_vec> <lock_mode_t> <lock_wait_policy_t>
     %destructor { free( ($$.name) ); free( ($$.schema) ); } <table_name>
     %destructor { free( ($$) ); } <sval>
     %destructor {
@@ -201,6 +202,7 @@
     %token NOT OFF SET TOP AS BY IF IN IS OF ON OR TO NO
     %token ARRAY CONCAT ILIKE SECOND MINUTE HOUR DAY MONTH YEAR
     %token SECONDS MINUTES HOURS DAYS MONTHS YEARS INTERVAL
+    %token SUNDAY MONDAY TUESDAY WEDNESDAY THURSDAY FRIDAY SATURDAY
     %token TRUE FALSE BOOLEAN
     %token TRANSACTION BEGIN COMMIT ROLLBACK
     %token NOWAIT SKIP LOCKED SHARE
@@ -241,6 +243,7 @@
     %type <order>                  order_desc
     %type <order_type>             opt_order_type
     %type <datetime_field>         datetime_field datetime_field_plural duration_field
+    %type <day_of_the_week_field>  day_of_the_week_field
     %type <column_t>               column_def
     %type <table_element_t>        table_elem
     %type <column_type_t>          column_type
@@ -252,8 +255,8 @@
     %type <with_description_t>     with_description
     %type <set_operator_t>         set_operator set_type
     %type <column_constraint_t>    column_constraint
-    %type <column_constraint_set>  opt_column_constraints
-    %type <column_constraint_set>  column_constraint_set
+    %type <column_constraint_vec>  column_constraint_list
+    %type <column_constraint_vec>  opt_column_constraints
     %type <alter_action_t>         alter_action
     %type <drop_action_t>          drop_action
     %type <lock_wait_policy_t>     opt_row_lock_policy
@@ -508,10 +511,6 @@ create_statement : CREATE TABLE opt_not_exists table_name FROM IDENTIFIER FILE f
   $$->tableName = $4.name;
   $$->setColumnDefsAndConstraints($6);
   delete $6;
-  if (result->errorMsg()) {
-    delete $$;
-    YYERROR;
-  }
 }
 | CREATE TABLE opt_not_exists table_name AS select_statement {
   $$ = new CreateStatement(kCreateTable);
@@ -553,9 +552,7 @@ table_elem : column_def { $$ = $1; }
 
 column_def : IDENTIFIER column_type opt_column_constraints {
   $$ = new ColumnDefinition($1, $2, $3);
-  if (!$$->trySetNullableExplicit()) {
-    yyerror(&yyloc, result, scanner, ("Conflicting nullability constraints for " + std::string{$1}).c_str());
-  }
+  $$->setNullableExplicit();
 };
 
 column_type : BIGINT { $$ = ColumnType{DataType::BIGINT}; }
@@ -587,15 +584,15 @@ opt_decimal_specification : '(' INTVAL ',' INTVAL ')' { $$ = new std::pair<int64
 | '(' INTVAL ')' { $$ = new std::pair<int64_t, int64_t>{$2, 0}; }
 | /* empty */ { $$ = new std::pair<int64_t, int64_t>{0, 0}; };
 
-opt_column_constraints : column_constraint_set { $$ = $1; }
-| /* empty */ { $$ = new std::unordered_set<ConstraintType>(); };
+opt_column_constraints : column_constraint_list { $$ = $1; }
+| /* empty */ { $$ = new std::vector<ConstraintType>(); };
 
-column_constraint_set : column_constraint {
-  $$ = new std::unordered_set<ConstraintType>();
-  $$->insert($1);
+column_constraint_list : column_constraint {
+  $$ = new std::vector<ConstraintType>();
+  $$->push_back($1);
 }
-| column_constraint_set column_constraint {
-  $1->insert($2);
+| column_constraint_list column_constraint {
+  $1->push_back($2);
   $$ = $1;
 }
 
@@ -961,9 +958,12 @@ comp_expr : operand '=' operand { $$ = Expr::makeOpBinary($1, kOpEquals, $3); }
 | operand '<' operand { $$ = Expr::makeOpBinary($1, kOpLess, $3); }
 | operand '>' operand { $$ = Expr::makeOpBinary($1, kOpGreater, $3); }
 | operand LESSEQ operand { $$ = Expr::makeOpBinary($1, kOpLessEq, $3); }
-| operand GREATEREQ operand { $$ = Expr::makeOpBinary($1, kOpGreaterEq, $3); };
+| operand GREATEREQ operand { $$ = Expr::makeOpBinary($1, kOpGreaterEq, $3); }
+| operand IS day_of_the_week_field { $$ = Expr::makeOpBinaryDOW($1, $3); } ;
 
 function_expr : IDENTIFIER '(' ')' { $$ = Expr::makeFunctionRef($1, new std::vector<Expr*>(), false); }
+| IDENTIFIER '(' int_literal datetime_field_plural ')' { $$ = Expr::makeFunctionRef($1, $3, $4); }
+| IDENTIFIER '(' int_literal datetime_field ')' { $$ = Expr::makeFunctionRef($1, $3, $4); }
 | IDENTIFIER '(' opt_distinct expr_list ')' { $$ = Expr::makeFunctionRef($1, $4, $3); };
 
 extract_expr : EXTRACT '(' datetime_field FROM expr ')' { $$ = Expr::makeExtract($3, $5); };
@@ -983,6 +983,14 @@ datetime_field_plural : SECONDS { $$ = kDatetimeSecond; }
 | DAYS { $$ = kDatetimeDay; }
 | MONTHS { $$ = kDatetimeMonth; }
 | YEARS { $$ = kDatetimeYear; };
+
+day_of_the_week_field: SUNDAY { $$ = kDaySunday; }
+| MONDAY { $$ = kDayMonday; }
+| TUESDAY { $$ = kDayTuesday; }
+| WEDNESDAY { $$ = kDayWednesday; }
+| THURSDAY { $$ = kDayThursday; }
+| FRIDAY { $$ = kDayFriday; }
+| SATURDAY { $$ = kDaySaturday; };
 
 duration_field : datetime_field | datetime_field_plural;
 

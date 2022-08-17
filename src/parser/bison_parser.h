@@ -236,25 +236,32 @@ extern int hsql_debug;
     SQL_MONTHS = 403,              /* MONTHS  */
     SQL_YEARS = 404,               /* YEARS  */
     SQL_INTERVAL = 405,            /* INTERVAL  */
-    SQL_TRUE = 406,                /* TRUE  */
-    SQL_FALSE = 407,               /* FALSE  */
-    SQL_BOOLEAN = 408,             /* BOOLEAN  */
-    SQL_TRANSACTION = 409,         /* TRANSACTION  */
-    SQL_BEGIN = 410,               /* BEGIN  */
-    SQL_COMMIT = 411,              /* COMMIT  */
-    SQL_ROLLBACK = 412,            /* ROLLBACK  */
-    SQL_NOWAIT = 413,              /* NOWAIT  */
-    SQL_SKIP = 414,                /* SKIP  */
-    SQL_LOCKED = 415,              /* LOCKED  */
-    SQL_SHARE = 416,               /* SHARE  */
-    SQL_EQUALS = 417,              /* EQUALS  */
-    SQL_NOTEQUALS = 418,           /* NOTEQUALS  */
-    SQL_LESS = 419,                /* LESS  */
-    SQL_GREATER = 420,             /* GREATER  */
-    SQL_LESSEQ = 421,              /* LESSEQ  */
-    SQL_GREATEREQ = 422,           /* GREATEREQ  */
-    SQL_NOTNULL = 423,             /* NOTNULL  */
-    SQL_UMINUS = 424               /* UMINUS  */
+    SQL_SUNDAY = 406,              /* SUNDAY  */
+    SQL_MONDAY = 407,              /* MONDAY  */
+    SQL_TUESDAY = 408,             /* TUESDAY  */
+    SQL_WEDNESDAY = 409,           /* WEDNESDAY  */
+    SQL_THURSDAY = 410,            /* THURSDAY  */
+    SQL_FRIDAY = 411,              /* FRIDAY  */
+    SQL_SATURDAY = 412,            /* SATURDAY  */
+    SQL_TRUE = 413,                /* TRUE  */
+    SQL_FALSE = 414,               /* FALSE  */
+    SQL_BOOLEAN = 415,             /* BOOLEAN  */
+    SQL_TRANSACTION = 416,         /* TRANSACTION  */
+    SQL_BEGIN = 417,               /* BEGIN  */
+    SQL_COMMIT = 418,              /* COMMIT  */
+    SQL_ROLLBACK = 419,            /* ROLLBACK  */
+    SQL_NOWAIT = 420,              /* NOWAIT  */
+    SQL_SKIP = 421,                /* SKIP  */
+    SQL_LOCKED = 422,              /* LOCKED  */
+    SQL_SHARE = 423,               /* SHARE  */
+    SQL_EQUALS = 424,              /* EQUALS  */
+    SQL_NOTEQUALS = 425,           /* NOTEQUALS  */
+    SQL_LESS = 426,                /* LESS  */
+    SQL_GREATER = 427,             /* GREATER  */
+    SQL_LESSEQ = 428,              /* LESSEQ  */
+    SQL_GREATEREQ = 429,           /* GREATEREQ  */
+    SQL_NOTNULL = 430,             /* NOTNULL  */
+    SQL_UMINUS = 431               /* UMINUS  */
   };
   typedef enum hsql_tokentype hsql_token_kind_t;
 #endif
@@ -294,6 +301,7 @@ union HSQL_STYPE
   hsql::ColumnType column_type_t;
   hsql::ConstraintType column_constraint_t;
   hsql::DatetimeField datetime_field;
+  hsql::DayOfTheWeek day_of_the_week_field;
   hsql::DropColumnAction* drop_action_t;
   hsql::Expr* expr;
   hsql::GroupByDescription* group_t;
@@ -312,7 +320,7 @@ union HSQL_STYPE
   hsql::LockingClause* locking_t;
 
   std::vector<char*>* str_vec;
-  std::unordered_set<hsql::ConstraintType>* column_constraint_set;
+  std::vector<hsql::ConstraintType>* column_constraint_vec;
   std::vector<hsql::Expr*>* expr_vec;
   std::vector<hsql::OrderDescription*>* order_vec;
   std::vector<hsql::SQLStatement*>* stmt_vec;
@@ -327,7 +335,7 @@ union HSQL_STYPE
   hsql::RowLockMode lock_mode_t;
   hsql::RowLockWaitPolicy lock_wait_policy_t;
 
-#line 331 "bison_parser.h"
+#line 339 "bison_parser.h"
 
 };
 typedef union HSQL_STYPE HSQL_STYPE;
